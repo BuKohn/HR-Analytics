@@ -68,6 +68,7 @@ const initialAssignments: AssignmentRow[] = [
 
 const roleLabels: Record<string, string> = {
   owner: 'Владелец',
+  hr: 'HR',
   admin: 'Администратор',
   employee: 'Сотрудник',
 }
@@ -263,7 +264,8 @@ export default function CompanyDashboard() {
     setAssignmentError('')
   }
 
-  const companyName = profile?.companyName || 'Компания не указана'
+  const companyName = profile?.companyName ?? ''
+  const userName = profile?.fullName || profile?.email || 'Пользователь'
   const roleLabel = profile ? roleLabels[profile.role] ?? profile.role : '—'
 
   const handleLogout = () => {
@@ -283,7 +285,10 @@ export default function CompanyDashboard() {
           </a>
 
           <div className="dashboard-header-meta">
-            <span className="dashboard-company">{companyName}</span>
+            <span className="dashboard-user">{userName}</span>
+            {companyName && (
+              <span className="dashboard-company">{companyName}</span>
+            )}
             <span className="dashboard-role">{roleLabel}</span>
             <a className="dashboard-exit" href="/login" onClick={handleLogout}>
               <LogOut size={15} />

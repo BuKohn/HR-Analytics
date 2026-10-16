@@ -59,6 +59,12 @@
   gap: 12px;
 }
 
+.dashboard-user {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .dashboard-company {
   font-size: 13px;
   font-weight: 600;

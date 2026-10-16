@@ -310,6 +310,7 @@ export async function login(data: LoginRequest): Promise<TokenResponse> {
 }
 
 export const AUTH_PROFILE_KEY = 'hr_profile'
+export const AUTH_PROFILES_KEY = 'hr_profiles'
 
 export interface StoredProfile {
   userId: string
@@ -319,6 +320,56 @@ export interface StoredProfile {
   companyId: string | null
   companyName: string
   companyInn: string
+}
+
+function toStoredProfile(value: unknown): StoredProfile | null {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const email = typeof record.email === 'string' ? record.email : ''
+
+  if (!email) {
+    return null
+  }
+
+  return {
+    userId: typeof record.userId === 'string' ? record.userId : '',
+    email,
+    fullName: typeof record.fullName === 'string' ? record.fullName : '',
+    role: typeof record.role === 'string' ? record.role : '',
+    companyId: typeof record.companyId === 'string' ? record.companyId : null,
+    companyName:
+      typeof record.companyName === 'string' ? record.companyName : '',
+    companyInn: typeof record.companyInn === 'string' ? record.companyInn : '',
+  }
+}
+
+function profileKey(profile: StoredProfile) {
+  return profile.userId || profile.email.trim().toLowerCase()
+}
+
+function readKnownProfiles() {
+  const raw = localStorage.getItem(AUTH_PROFILES_KEY)
+
+  if (!raw) {
+    return []
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw)
+
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+
+    return parsed
+      .map(toStoredProfile)
+      .filter((profile): profile is StoredProfile => profile !== null)
+  } catch {
+    return []
+  }
 }
 
 export function saveProfile(profile: StoredProfile, remember: boolean) {
@@ -339,22 +390,45 @@ export function getProfile(): StoredProfile | null {
   }
 
   try {
-    const parsed = JSON.parse(raw) as Partial<StoredProfile>
-
-    return {
-      userId: typeof parsed.userId === 'string' ? parsed.userId : '',
-      email: typeof parsed.email === 'string' ? parsed.email : '',
-      fullName: typeof parsed.fullName === 'string' ? parsed.fullName : '',
-      role: typeof parsed.role === 'string' ? parsed.role : '',
-      companyId: typeof parsed.companyId === 'string' ? parsed.companyId : null,
-      companyName:
-        typeof parsed.companyName === 'string' ? parsed.companyName : '',
-      companyInn:
-        typeof parsed.companyInn === 'string' ? parsed.companyInn : '',
-    }
+    return toStoredProfile(JSON.parse(raw))
   } catch {
     return null
   }
+}
+
+export function rememberProfile(profile: StoredProfile) {
+  if (!profile.fullName && !profile.companyName) {
+    return
+  }
+
+  const key = profileKey(profile)
+  const rest = readKnownProfiles().filter((item) => profileKey(item) !== key)
+
+  try {
+    localStorage.setItem(AUTH_PROFILES_KEY, JSON.stringify([...rest, profile]))
+  } catch {
+    return
+  }
+}
+
+export function findKnownProfile(userId: string, email: string) {
+  const known = readKnownProfiles()
+
+  if (userId) {
+    const byId = known.find((profile) => profile.userId === userId)
+
+    if (byId) {
+      return byId
+    }
+  }
+
+  const normalizedEmail = email.trim().toLowerCase()
+
+  return (
+    known.find(
+      (profile) => profile.email.trim().toLowerCase() === normalizedEmail,
+    ) ?? null
+  )
 }
 
 export function clearProfile() {
@@ -391,4 +465,18 @@ export function readTokenClaims(token: string) {
     userId: typeof payload?.sub === 'string' ? payload.sub : '',
     role: typeof payload?.role === 'string' ? payload.role : '',
   }
+}
+
+const DASHBOARD_ROLES = ['owner', 'hr']
+
+export function hasDashboardAccess() {
+  const token = getAuthToken()
+
+  if (!token) {
+    return false
+  }
+
+  const claims = readTokenClaims(token)
+
+  return DASHBOARD_ROLES.includes(claims.role)
 }

@@ -5,13 +5,18 @@ import Landing from './Landing.tsx'
 import LoginPage from './auth/LoginPage.tsx'
 import RegisterPage from './auth/RegisterPage.tsx'
 import CompanyDashboard from './dashboard/CompanyDashboard.tsx'
-import { isAuthenticated } from './api/auth.ts'
+import { hasDashboardAccess, isAuthenticated } from './api/auth.ts'
 
 const path = window.location.pathname.replace(/\/+$/, '') || '/'
 const isAuthorized = isAuthenticated()
+const canOpenDashboard = hasDashboardAccess()
 
-if (path === '/dashboard' && !isAuthorized) {
-  window.location.replace('/login')
+if (path === '/dashboard') {
+  if (!isAuthorized) {
+    window.location.replace('/login')
+  } else if (!canOpenDashboard) {
+    window.location.replace('/')
+  }
 }
 
 const page =
@@ -20,7 +25,7 @@ const page =
   ) : path === '/register' ? (
     <RegisterPage />
   ) : path === '/dashboard' ? (
-    isAuthorized ? <CompanyDashboard /> : null
+    isAuthorized && canOpenDashboard ? <CompanyDashboard /> : null
   ) : (
     <Landing />
   )

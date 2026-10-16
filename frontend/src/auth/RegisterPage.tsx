@@ -4,10 +4,12 @@ import {
   RegistrationApiError,
   registerCompany,
   registerEmployee,
+  rememberProfile,
   saveProfile,
   type RegisterFieldErrors,
   type RegisterFieldName,
   type RegisterResponse,
+  type StoredProfile,
 } from '../api/auth'
 import { AuthLayout } from './AuthLayout'
 import { PasswordField, TextField } from './FormFields'
@@ -194,18 +196,18 @@ export default function RegisterPage() {
             })
 
       setResult(response)
-      saveProfile(
-        {
-          userId: response.user.id,
-          email: response.user.email,
-          fullName: response.user.full_name,
-          role: response.user.role,
-          companyId: response.company?.id ?? null,
-          companyName: response.company?.name ?? '',
-          companyInn: response.company?.inn ?? '',
-        },
-        true,
-      )
+      const profile: StoredProfile = {
+        userId: response.user.id,
+        email: response.user.email,
+        fullName: response.user.full_name,
+        role: response.user.role,
+        companyId: response.company?.id ?? null,
+        companyName: response.company?.name ?? '',
+        companyInn: response.company?.inn ?? '',
+      }
+
+      saveProfile(profile, true)
+      rememberProfile(profile)
     } catch (requestError) {
       if (requestError instanceof RegistrationApiError) {
         setFieldErrors(requestError.fieldErrors)
