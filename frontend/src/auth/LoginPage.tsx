@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import {
-  getProfile,
+  findKnownProfile,
   LoginApiError,
   login,
   readTokenClaims,
+  rememberProfile,
   saveProfile,
   setAuthToken,
+  type StoredProfile,
 } from '../api/auth'
 import { AuthLayout } from './AuthLayout'
 import { PasswordField, TextField } from './FormFields'
@@ -60,24 +62,21 @@ export default function LoginPage() {
     try {
       const token = await login({ email, password })
       const claims = readTokenClaims(token.access_token)
-      const previous = getProfile()
-      const known =
-        previous !== null && previous.email === email ? previous : null
+      const known = findKnownProfile(claims.userId, email)
+      const profile: StoredProfile = {
+        userId: claims.userId,
+        email,
+        fullName: known?.fullName ?? '',
+        role: claims.role,
+        companyId: known?.companyId ?? null,
+        companyName: known?.companyName ?? '',
+        companyInn: known?.companyInn ?? '',
+      }
 
       setAuthToken(token.access_token, remember)
-      saveProfile(
-        {
-          userId: claims.userId,
-          email,
-          fullName: known?.fullName ?? '',
-          role: claims.role,
-          companyId: known?.companyId ?? null,
-          companyName: known?.companyName ?? '',
-          companyInn: known?.companyInn ?? '',
-        },
-        remember,
-      )
-      window.location.replace('/dashboard')
+      saveProfile(profile, remember)
+      rememberProfile(profile)
+      window.location.replace('/')
     } catch (requestError) {
       if (requestError instanceof LoginApiError) {
         setFieldErrors(requestError.fieldErrors)

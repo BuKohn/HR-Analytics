@@ -15,6 +15,14 @@ import {
   X,
 } from 'lucide-react'
 import './Landing.css'
+import {
+  clearAuthToken,
+  clearProfile,
+  getProfile,
+  hasDashboardAccess,
+  isAuthenticated,
+  type StoredProfile,
+} from './api/auth'
 
 const modules = [
   {
@@ -58,10 +66,24 @@ function Logo() {
   )
 }
 
-function Header() {
+function Header({
+  session,
+  canOpenDashboard,
+}: {
+  session: StoredProfile | null
+  canOpenDashboard: boolean
+}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const closeMenu = () => setIsMenuOpen(false)
+
+  const handleLogout = () => {
+    clearAuthToken()
+    clearProfile()
+    window.location.reload()
+  }
+
+  const accountName = session ? session.fullName || session.email : ''
 
   return (
     <header className="header">
@@ -75,14 +97,45 @@ function Header() {
           <a href="#analytics" onClick={closeMenu}>
             Аналитика
           </a>
-          <a href="/login" onClick={closeMenu}>
-            Войти
-          </a>
+          {canOpenDashboard ? (
+            <a href="/dashboard" onClick={closeMenu}>
+              Панель управления
+            </a>
+          ) : session ? null : (
+            <a href="/login" onClick={closeMenu}>
+              Войти
+            </a>
+          )}
+          {session && (
+            <span className="navigation-account">
+              <span>{accountName}</span>
+              <button
+                className="navigation-logout"
+                type="button"
+                onClick={handleLogout}
+              >
+                Выйти
+              </button>
+            </span>
+          )}
         </nav>
 
-        <a className="button button-small header-button" href="/register">
-          Регистрация
-        </a>
+        {session ? (
+          <span className="header-account">
+            <span className="header-user">{accountName}</span>
+            <button
+              className="button button-small button-secondary"
+              type="button"
+              onClick={handleLogout}
+            >
+              Выйти
+            </button>
+          </span>
+        ) : (
+          <a className="button button-small header-button" href="/register">
+            Регистрация
+          </a>
+        )}
 
         <button
           className="menu-button"
@@ -119,9 +172,17 @@ function SectionHeading({
 }
 
 function Landing() {
+  const [session] = useState(() => (isAuthenticated() ? getProfile() : null))
+  const [canOpenDashboard] = useState(hasDashboardAccess)
+  const primaryCta = session
+    ? canOpenDashboard
+      ? { href: '/dashboard', label: 'Панель управления' }
+      : null
+    : { href: '/register', label: 'Попробовать платформу' }
+
   return (
     <div id="top">
-      <Header />
+      <Header session={session} canOpenDashboard={canOpenDashboard} />
 
       <main>
         <section className="container hero">
@@ -140,10 +201,15 @@ function Landing() {
             </p>
 
             <div className="hero-actions">
-              <a className="button" href="/register">
-                Попробовать платформу <ArrowRight size={18} />
-              </a>
-              <a className="button button-secondary" href="#modules">
+              {primaryCta && (
+                <a className="button" href={primaryCta.href}>
+                  {primaryCta.label} <ArrowRight size={18} />
+                </a>
+              )}
+              <a
+                className={primaryCta ? 'button button-secondary' : 'button'}
+                href="#modules"
+              >
                 Посмотреть возможности
               </a>
             </div>
@@ -337,12 +403,11 @@ function Landing() {
               Оценка 360°, планы развития и аналитика — в одной веб-платформе.
             </p>
           </div>
-          <a
-            className="button button-light"
-            href="/register"
-          >
-            Попробовать платформу <ArrowRight size={18} />
-          </a>
+          {primaryCta && (
+            <a className="button button-light" href={primaryCta.href}>
+              {primaryCta.label} <ArrowRight size={18} />
+            </a>
+          )}
         </section>
       </main>
 

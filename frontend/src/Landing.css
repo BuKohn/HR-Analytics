@@ -544,6 +544,40 @@ button {
   font-size: 11px;
 }
 
+.header-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-user {
+  max-width: 220px;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.navigation-account {
+  display: none;
+}
+
+.navigation-logout {
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555e72;
+  background: transparent;
+  cursor: pointer;
+}
+
+.navigation-logout:hover {
+  color: var(--color-primary);
+}
+
 @media (max-width: 900px) {
   .navigation {
     position: absolute;
@@ -569,7 +603,17 @@ button {
     padding: 11px;
   }
 
-  .header-button {
+  .navigation-account {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .header-button,
+  .header-account {
     display: none;
   }
 
