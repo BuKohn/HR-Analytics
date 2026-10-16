@@ -217,6 +217,39 @@
   color: var(--dash-muted);
 }
 
+.dashboard-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-view-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--dash-border);
+  border-radius: 8px;
+  background: var(--dash-surface);
+}
+
+.dashboard-view-switch button {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dash-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.dashboard-view-switch button.is-active {
+  color: var(--dash-primary);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(21, 24, 39, 0.09);
+}
+
 .dashboard-btn {
   display: inline-flex;
   align-items: center;
@@ -292,6 +325,192 @@
 .dashboard-icon-btn:hover {
   color: var(--dash-primary);
   border-color: #c5d0f5;
+}
+
+.org-chart {
+  overflow-x: auto;
+  padding: 14px 12px 18px;
+}
+
+.org-chart-inner {
+  display: inline-flex;
+  min-width: 100%;
+  flex-direction: column;
+  align-items: center;
+}
+
+.org-node {
+  position: relative;
+  display: flex;
+  min-width: 180px;
+  min-height: 88px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 14px;
+  border: 1px solid var(--dash-border);
+  border-radius: 10px;
+  background: #fff;
+  text-align: center;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.org-node.is-path {
+  border-color: #c5d0f5;
+  box-shadow: 0 0 0 3px rgba(52, 84, 209, 0.12);
+}
+
+.org-node--root {
+  border-color: #c5d0f5;
+  background: var(--dash-primary-soft);
+}
+
+.org-node--root.is-path {
+  border-color: var(--dash-primary);
+}
+
+.org-add {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--dash-border);
+  border-radius: 50%;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--dash-muted);
+  background: #fff;
+  cursor: pointer;
+  opacity: 0.4;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.org-node:hover .org-add,
+.org-add:focus-visible {
+  opacity: 1;
+}
+
+.org-add:hover {
+  color: var(--dash-primary);
+  border-color: #c5d0f5;
+}
+
+.org-toggle {
+  position: absolute;
+  bottom: -11px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  transform: translateX(-50%);
+  border: 1px solid var(--dash-border);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--dash-muted);
+  background: #fff;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.org-toggle:hover {
+  color: var(--dash-primary);
+  border-color: #c5d0f5;
+  background: var(--dash-primary-soft);
+}
+
+.org-node-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.org-node-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--dash-muted);
+}
+
+.org-level {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding-top: 24px;
+}
+
+.org-level::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 12px;
+  transform: translateX(-1px);
+  background: var(--dash-border);
+}
+
+.org-branch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.org-level > .org-branch::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 2px;
+  height: 12px;
+  transform: translateX(-1px);
+  background: var(--dash-border);
+}
+
+.org-level > .org-branch::after {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: -10px;
+  width: calc(100% + 20px);
+  height: 2px;
+  background: var(--dash-border);
+}
+
+.org-level > .org-branch:first-child::after {
+  left: 50%;
+  width: calc(50% + 10px);
+}
+
+.org-level > .org-branch:last-child::after {
+  left: -10px;
+  width: calc(50% + 10px);
+}
+
+.org-level > .org-branch:only-child::after {
+  display: none;
 }
 
 .dashboard-assign {
@@ -406,5 +625,9 @@
 
   .dashboard-panel-head {
     flex-direction: column;
+  }
+
+  .dashboard-panel-actions {
+    flex-wrap: wrap;
   }
 }

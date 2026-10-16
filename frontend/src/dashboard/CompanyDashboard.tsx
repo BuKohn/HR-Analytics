@@ -28,12 +28,13 @@ import {
 } from './dashboardStorage'
 
 type Tab = 'structure' | 'courses'
+type StructureView = 'chart' | 'table'
 
 const initialDepartments: DepartmentRow[] = [
-  { id: '1', name: 'HR и кадры', head: 'Иванова А.С.', employees: 8 },
-  { id: '2', name: 'Разработка', head: 'Петров Д.К.', employees: 24 },
-  { id: '3', name: 'Продажи', head: 'Сидорова М.В.', employees: 15 },
-  { id: '4', name: 'Маркетинг', head: 'Козлов И.П.', employees: 11 },
+  { id: '1', name: 'HR и кадры', head: 'Иванова А.С.', employees: 8, parentId: null },
+  { id: '2', name: 'Разработка', head: 'Петров Д.К.', employees: 24, parentId: null },
+  { id: '3', name: 'Продажи', head: 'Сидорова М.В.', employees: 15, parentId: null },
+  { id: '4', name: 'Маркетинг', head: 'Козлов И.П.', employees: 11, parentId: null },
 ]
 
 const initialCourseCatalog: CourseRow[] = [
@@ -104,8 +105,182 @@ function formatDeadline(value: string) {
   return `${day}.${month}.${year}`
 }
 
+function plural(count: number, one: string, few: string, many: string) {
+  const mod10 = count % 10
+  const mod100 = count % 100
+
+  if (mod10 === 1 && mod100 !== 11) {
+    return one
+  }
+
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return few
+  }
+
+  return many
+}
+
+function collectDescendantIds(departments: DepartmentRow[], id: string) {
+  const found = new Set<string>()
+  const queue = [id]
+
+  while (queue.length > 0) {
+    const current = queue.pop()
+
+    if (current === undefined) {
+      break
+    }
+
+    departments.forEach((department) => {
+      if (department.parentId === current && !found.has(department.id)) {
+        found.add(department.id)
+        queue.push(department.id)
+      }
+    })
+  }
+
+  return found
+}
+
+function OrganizationChart({
+  departments,
+  companyName,
+  collapsedIds,
+  onToggleCollapse,
+  onAddChild,
+}: {
+  departments: DepartmentRow[]
+  companyName: string
+  collapsedIds: Set<string>
+  onToggleCollapse: (id: string) => void
+  onAddChild: (department: DepartmentRow | null) => void
+}) {
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
+
+  const ids = new Set(departments.map((department) => department.id))
+  const topLevel = departments.filter(
+    (department) => !department.parentId || !ids.has(department.parentId),
+  )
+  const roots = topLevel.length > 0 ? topLevel : departments
+  const highlightedIds = new Set<string>()
+
+  if (hoveredId) {
+    const byId = new Map(
+      departments.map((department) => [department.id, department]),
+    )
+    let current: string | null = hoveredId
+
+    while (current && !highlightedIds.has(current)) {
+      highlightedIds.add(current)
+      current = byId.get(current)?.parentId ?? null
+    }
+  }
+
+  const renderBranch = (department: DepartmentRow, visited: Set<string>) => {
+    if (visited.has(department.id)) {
+      return null
+    }
+
+    const nextVisited = new Set(visited)
+    nextVisited.add(department.id)
+
+    const children = departments.filter(
+      (child) => child.parentId === department.id,
+    )
+    const isCollapsed = collapsedIds.has(department.id)
+    const hiddenCount = isCollapsed
+      ? collectDescendantIds(departments, department.id).size
+      : 0
+
+    return (
+      <div className="org-branch" key={department.id}>
+        <div
+          className={`org-node ${highlightedIds.has(department.id) ? 'is-path' : ''}`}
+          onMouseEnter={() => setHoveredId(department.id)}
+          onMouseLeave={() => setHoveredId(null)}
+        >
+          <button
+            type="button"
+            className="org-add"
+            aria-label={`Добавить отдел в «${department.name}»`}
+            onClick={() => onAddChild(department)}
+          >
+            +
+          </button>
+
+          <span className="org-node-title">{department.name}</span>
+          <span className="org-node-meta">{department.head}</span>
+          <span className="org-node-meta">
+            {department.employees}{' '}
+            {plural(
+              department.employees,
+              'сотрудник',
+              'сотрудника',
+              'сотрудников',
+            )}
+          </span>
+
+          {children.length > 0 && (
+            <button
+              type="button"
+              className="org-toggle"
+              aria-expanded={!isCollapsed}
+              aria-label={
+                isCollapsed
+                  ? `Развернуть отдел «${department.name}»`
+                  : `Свернуть отдел «${department.name}»`
+              }
+              onClick={() => onToggleCollapse(department.id)}
+            >
+              {isCollapsed ? `+${hiddenCount}` : '−'}
+            </button>
+          )}
+        </div>
+
+        {children.length > 0 && !isCollapsed && (
+          <div className="org-level">
+            {children.map((child) => renderBranch(child, nextVisited))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="org-chart" onMouseLeave={() => setHoveredId(null)}>
+      <div className="org-chart-inner">
+        <div className={`org-node org-node--root ${hoveredId ? 'is-path' : ''}`}>
+          <button
+            type="button"
+            className="org-add"
+            aria-label="Добавить отдел"
+            onClick={() => onAddChild(null)}
+          >
+            +
+          </button>
+
+          <span className="org-node-title">{companyName}</span>
+          <span className="org-node-meta">
+            {departments.length}{' '}
+            {plural(departments.length, 'отдел', 'отдела', 'отделов')}
+          </span>
+        </div>
+
+        {roots.length > 0 && (
+          <div className="org-level">
+            {roots.map((department) => renderBranch(department, new Set()))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function CompanyDashboard() {
   const [tab, setTab] = useState<Tab>('structure')
+  const [structureView, setStructureView] = useState<StructureView>('chart')
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
+  const [draftParentId, setDraftParentId] = useState<string | null>(null)
   const [profile] = useState<StoredProfile | null>(getProfile)
   const [departments, setDepartments] = useState(() =>
     loadDepartments(initialDepartments),
@@ -150,8 +325,12 @@ export default function CompanyDashboard() {
     ? selectedCourseId
     : courseCatalog[0]?.id ?? ''
 
-  const openDepartmentForm = (department: DepartmentRow | null) => {
+  const openDepartmentForm = (
+    department: DepartmentRow | null,
+    parentId: string | null = null,
+  ) => {
     setEditingDepartment(department)
+    setDraftParentId(parentId)
     setIsDepartmentFormOpen(true)
     setDepartmentError('')
   }
@@ -159,7 +338,22 @@ export default function CompanyDashboard() {
   const closeDepartmentForm = () => {
     setIsDepartmentFormOpen(false)
     setEditingDepartment(null)
+    setDraftParentId(null)
     setDepartmentError('')
+  }
+
+  const toggleCollapsed = (id: string) => {
+    setCollapsedIds((current) => {
+      const next = new Set(current)
+
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+
+      return next
+    })
   }
 
   const handleDepartmentSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -168,6 +362,8 @@ export default function CompanyDashboard() {
     const formData = new FormData(event.currentTarget)
     const name = String(formData.get('department_name') ?? '').trim()
     const head = String(formData.get('department_head') ?? '').trim()
+    const parent = String(formData.get('department_parent') ?? '').trim()
+    const parentId = parent || null
 
     if (!name) {
       setDepartmentError('Введите название отдела')
@@ -189,15 +385,26 @@ export default function CompanyDashboard() {
       setDepartments((current) =>
         current.map((department) =>
           department.id === editingDepartment.id
-            ? { ...department, name, head: head || '—' }
+            ? { ...department, name, head: head || '—', parentId }
             : department,
         ),
       )
     } else {
       setDepartments((current) => [
         ...current,
-        { id: createId(), name, head: head || '—', employees: 0 },
+        { id: createId(), name, head: head || '—', employees: 0, parentId },
       ])
+
+      setCollapsedIds((current) => {
+        if (!parentId || !current.has(parentId)) {
+          return current
+        }
+
+        const next = new Set(current)
+        next.delete(parentId)
+
+        return next
+      })
     }
 
     closeDepartmentForm()
@@ -273,6 +480,16 @@ export default function CompanyDashboard() {
     clearProfile()
   }
 
+  const blockedParentIds = editingDepartment
+    ? collectDescendantIds(departments, editingDepartment.id)
+    : new Set<string>()
+
+  const parentOptions = departments.filter(
+    (department) =>
+      department.id !== editingDepartment?.id &&
+      !blockedParentIds.has(department.id),
+  )
+
   return (
     <main className="dashboard">
       <header className="dashboard-header">
@@ -346,26 +563,48 @@ export default function CompanyDashboard() {
                   <h2 id="panel-title">Организационная структура</h2>
                   <p>Отделы, руководители и численность</p>
                 </div>
-                <button
-                  type="button"
-                  className="dashboard-btn"
-                  onClick={() => {
-                    if (isDepartmentFormOpen && !editingDepartment) {
-                      closeDepartmentForm()
-                      return
-                    }
+                <div className="dashboard-panel-actions">
+                  <div
+                    className="dashboard-view-switch"
+                    role="group"
+                    aria-label="Вид структуры"
+                  >
+                    <button
+                      type="button"
+                      className={structureView === 'chart' ? 'is-active' : ''}
+                      onClick={() => setStructureView('chart')}
+                    >
+                      Схема
+                    </button>
+                    <button
+                      type="button"
+                      className={structureView === 'table' ? 'is-active' : ''}
+                      onClick={() => setStructureView('table')}
+                    >
+                      Таблица
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="dashboard-btn"
+                    onClick={() => {
+                      if (isDepartmentFormOpen && !editingDepartment) {
+                        closeDepartmentForm()
+                        return
+                      }
 
-                    openDepartmentForm(null)
-                  }}
-                >
-                  <Plus size={16} />
-                  Добавить отдел
-                </button>
+                      openDepartmentForm(null)
+                    }}
+                  >
+                    <Plus size={16} />
+                    Добавить отдел
+                  </button>
+                </div>
               </div>
 
               {isDepartmentFormOpen && (
                 <form
-                  key={editingDepartment?.id ?? 'new'}
+                  key={editingDepartment?.id ?? draftParentId ?? 'new'}
                   className="dashboard-form"
                   onSubmit={handleDepartmentSubmit}
                   noValidate
@@ -404,6 +643,24 @@ export default function CompanyDashboard() {
                     </div>
                   </div>
 
+                  <div className="dashboard-field">
+                    <label htmlFor="department-parent">
+                      Родительский отдел
+                    </label>
+                    <select
+                      id="department-parent"
+                      name="department_parent"
+                      defaultValue={editingDepartment?.parentId ?? draftParentId ?? ''}
+                    >
+                      <option value="">Без родительского отдела</option>
+                      {parentOptions.map((department) => (
+                        <option key={department.id} value={department.id}>
+                          {department.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {departmentError && (
                     <p className="dashboard-form-error" role="alert">
                       {departmentError}
@@ -425,44 +682,56 @@ export default function CompanyDashboard() {
                 </form>
               )}
 
-              <div className="dashboard-table-wrap">
-                <table className="dashboard-table">
-                  <thead>
-                    <tr>
-                      <th>Отдел</th>
-                      <th>Руководитель</th>
-                      <th>Сотрудников</th>
-                      <th aria-label="Действия" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {departments.map((dept) => (
-                      <tr key={dept.id}>
-                        <td>
-                          <strong>{dept.name}</strong>
-                        </td>
-                        <td>{dept.head}</td>
-                        <td>
-                          <Users size={14} style={{ verticalAlign: '-2px', marginRight: 4 }} />
-                          {dept.employees}
-                        </td>
-                        <td>
-                          <div className="dashboard-table-actions">
-                            <button
-                              type="button"
-                              className="dashboard-icon-btn"
-                              aria-label={`Редактировать ${dept.name}`}
-                              onClick={() => openDepartmentForm(dept)}
-                            >
-                              <Pencil size={15} />
-                            </button>
-                          </div>
-                        </td>
+              {structureView === 'chart' ? (
+                <OrganizationChart
+                  departments={departments}
+                  companyName={companyName || 'Компания'}
+                  collapsedIds={collapsedIds}
+                  onToggleCollapse={toggleCollapsed}
+                  onAddChild={(department) =>
+                    openDepartmentForm(null, department?.id ?? null)
+                  }
+                />
+              ) : (
+                <div className="dashboard-table-wrap">
+                  <table className="dashboard-table">
+                    <thead>
+                      <tr>
+                        <th>Отдел</th>
+                        <th>Руководитель</th>
+                        <th>Сотрудников</th>
+                        <th aria-label="Действия" />
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {departments.map((dept) => (
+                        <tr key={dept.id}>
+                          <td>
+                            <strong>{dept.name}</strong>
+                          </td>
+                          <td>{dept.head}</td>
+                          <td>
+                            <Users size={14} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+                            {dept.employees}
+                          </td>
+                          <td>
+                            <div className="dashboard-table-actions">
+                              <button
+                                type="button"
+                                className="dashboard-icon-btn"
+                                aria-label={`Редактировать ${dept.name}`}
+                                onClick={() => openDepartmentForm(dept)}
+                              >
+                                <Pencil size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </>
           ) : (
             <>
