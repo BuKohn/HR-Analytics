@@ -132,3 +132,31 @@ class SurveyAnswer(Base):
     # Связи
     assignment = relationship("SurveyAssignment", back_populates="answers")
     question = relationship("SurveyQuestion", back_populates="answers")
+
+
+# АГРЕГИРОВАННЫЕ РЕЗУЛЬТАТЫ ОПРОСА (Для дашбордов и аналитики)
+# Возможно потом откажемся, посмотрим
+class SurveyResult(Base):
+    __tablename__ = "survey_results"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("survey_sessions.id"))
+    target_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("employees.id"))  # Кого оценивали
+
+    # Основные метрики
+    average_score: Mapped[float | None] = mapped_column(Float, nullable=True)  # Средний балл (например, 4.2 из 5)
+    total_respondents: Mapped[int] = mapped_column(Integer, default=0)  # Сколько человек должно было оценить
+    completed_respondents: Mapped[int] = mapped_column(Integer, default=0)  # Сколько реально оценило
+
+    # Детализация по категориям/навыкам (идеально для JSONB в PostgreSQL)
+    # Пример: {"leadership": 4.5, "communication": 3.8, "hard_skills": 4.0}
+    category_scores: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Статус и время
+    is_anonymous_safe: Mapped[bool] = mapped_column(Boolean,
+                                                    default=False)  # True, если оценивших >= 3 (защита анонимности)
+    calculated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+    # Связи
+    session = relationship("SurveySession", backref="results")
+    target = relationship("Employee", backref="survey_results")
