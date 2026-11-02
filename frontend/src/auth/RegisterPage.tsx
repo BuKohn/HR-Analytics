@@ -11,6 +11,7 @@ import {
   type RegisterResponse,
   type StoredProfile,
 } from '../api/auth'
+import { resolveProfileDepartments } from '../dashboard/dashboardStorage'
 import { AuthLayout } from './AuthLayout'
 import { PasswordField, TextField } from './FormFields'
 
@@ -196,6 +197,10 @@ export default function RegisterPage() {
             })
 
       setResult(response)
+      const departmentIds =
+        registrationType === 'employee'
+          ? [getValue(formData, 'department_id')]
+          : []
       const profile: StoredProfile = {
         userId: response.user.id,
         email: response.user.email,
@@ -204,6 +209,21 @@ export default function RegisterPage() {
         companyId: response.company?.id ?? null,
         companyName: response.company?.name ?? '',
         companyInn: response.company?.inn ?? '',
+        phone: '',
+        photo: '',
+        position: '',
+        departmentIds,
+        departmentNames: resolveProfileDepartments({
+          companyId: response.company?.id ?? null,
+          fullName: response.user.full_name,
+          role: response.user.role,
+          departmentNames: [],
+          departmentIds,
+        }),
+        city: '',
+        telegram: '',
+        about: '',
+        notifyByEmail: true,
       }
 
       saveProfile(profile, true)

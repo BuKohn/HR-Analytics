@@ -5,6 +5,7 @@ import {
   clearAuthToken,
   clearProfile,
   getProfile,
+  persistCurrentProfile,
   type StoredProfile,
 } from '../api/auth'
 import {
@@ -17,6 +18,7 @@ import {
   loadAssignments,
   loadCourses,
   loadDepartments,
+  resolveProfileDepartments,
   saveAssignments,
   saveCourses,
   saveDepartments,
@@ -102,6 +104,25 @@ export default function CompanyDashboard() {
 
   useEffect(() => {
     saveDepartments(companyId, departments)
+    const current = getProfile()
+
+    if (!current) {
+      return
+    }
+
+    const departmentNames = resolveProfileDepartments({
+      ...current,
+      companyId,
+    })
+
+    if (
+      departmentNames.length === current.departmentNames.length &&
+      departmentNames.every((name, index) => name === current.departmentNames[index])
+    ) {
+      return
+    }
+
+    persistCurrentProfile({ ...current, departmentNames })
   }, [companyId, departments])
 
   useEffect(() => {

@@ -320,6 +320,15 @@ export interface StoredProfile {
   companyId: string | null
   companyName: string
   companyInn: string
+  phone: string
+  photo: string
+  position: string
+  departmentNames: string[]
+  departmentIds?: string[]
+  city: string
+  telegram: string
+  about: string
+  notifyByEmail: boolean
 }
 
 function toStoredProfile(value: unknown): StoredProfile | null {
@@ -334,6 +343,15 @@ function toStoredProfile(value: unknown): StoredProfile | null {
     return null
   }
 
+  const departmentNames = Array.isArray(record.departmentNames)
+    ? record.departmentNames.filter(
+        (name): name is string =>
+          typeof name === 'string' && Boolean(name.trim()),
+      ).map((name) => name.trim())
+    : typeof record.departmentName === 'string' && record.departmentName.trim()
+      ? [record.departmentName.trim()]
+      : []
+
   return {
     userId: typeof record.userId === 'string' ? record.userId : '',
     email,
@@ -343,6 +361,19 @@ function toStoredProfile(value: unknown): StoredProfile | null {
     companyName:
       typeof record.companyName === 'string' ? record.companyName : '',
     companyInn: typeof record.companyInn === 'string' ? record.companyInn : '',
+    phone: typeof record.phone === 'string' ? record.phone : '',
+    photo: typeof record.photo === 'string' ? record.photo : '',
+    position: typeof record.position === 'string' ? record.position : '',
+    departmentNames,
+    departmentIds: Array.isArray(record.departmentIds)
+      ? record.departmentIds.filter(
+          (id): id is string => typeof id === 'string' && Boolean(id.trim()),
+        )
+      : [],
+    city: typeof record.city === 'string' ? record.city : '',
+    telegram: typeof record.telegram === 'string' ? record.telegram : '',
+    about: typeof record.about === 'string' ? record.about : '',
+    notifyByEmail: record.notifyByEmail !== false,
   }
 }
 
@@ -394,6 +425,12 @@ export function getProfile(): StoredProfile | null {
   } catch {
     return null
   }
+}
+
+export function persistCurrentProfile(profile: StoredProfile) {
+  const remember = Boolean(localStorage.getItem(AUTH_PROFILE_KEY))
+  saveProfile(profile, remember)
+  rememberProfile(profile)
 }
 
 export function rememberProfile(profile: StoredProfile) {
