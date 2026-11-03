@@ -24,7 +24,9 @@ export function DashboardHeader({
         </a>
 
         <div className="dashboard-header-meta">
-          <span className="dashboard-user">{userName}</span>
+          <a className="dashboard-user dashboard-user-link" href="/profile">
+            {userName}
+          </a>
           {companyName && (
             <span className="dashboard-company">{companyName}</span>
           )}

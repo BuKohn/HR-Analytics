@@ -108,7 +108,9 @@ function Header({
           )}
           {session && (
             <span className="navigation-account">
-              <span>{accountName}</span>
+              <a href="/profile" onClick={closeMenu}>
+                {accountName}
+              </a>
               <button
                 className="navigation-logout"
                 type="button"
@@ -122,7 +124,9 @@ function Header({
 
         {session ? (
           <span className="header-account">
-            <span className="header-user">{accountName}</span>
+            <a className="header-user" href="/profile">
+              {accountName}
+            </a>
             <button
               className="button button-small button-secondary"
               type="button"

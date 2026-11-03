@@ -145,6 +145,51 @@ export function loadDepartments(companyId: string | null) {
   return stored.filter((department) => isDepartmentId(department.id))
 }
 
+const OWNER_DEPARTMENT = 'руководство'
+
+export function resolveProfileDepartments(profile: {
+  companyId: string | null
+  fullName: string
+  role: string
+  departmentNames: string[]
+  departmentIds?: string[]
+}) {
+  const cached = loadDepartments(profile.companyId)
+  const names = new Set<string>()
+  const fullName = profile.fullName.trim().toLowerCase()
+  const cachedByName = new Map(
+    cached.map((department) => [department.name.trim().toLowerCase(), department.name]),
+  )
+
+  for (const name of profile.departmentNames) {
+    const match = cachedByName.get(name.trim().toLowerCase())
+
+    if (match) {
+      names.add(match)
+    }
+  }
+
+  for (const id of profile.departmentIds ?? []) {
+    const match = cached.find((department) => department.id === id)
+
+    if (match?.name) {
+      names.add(match.name)
+    }
+  }
+
+  for (const department of cached) {
+    if (fullName && department.head.trim().toLowerCase() === fullName) {
+      names.add(department.name)
+    }
+  }
+
+  if (profile.role === 'owner') {
+    names.add(cachedByName.get(OWNER_DEPARTMENT) ?? 'руководство')
+  }
+
+  return [...names]
+}
+
 export function loadCourses(fallback: CourseRow[]) {
   return readStored(COURSES_KEY, toCourse) ?? fallback
 }
